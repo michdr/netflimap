@@ -8,11 +8,16 @@ import dash_table
 import pandas as pd
 from dash.dependencies import Input, Output, State
 
-from netflimap.helpers import (SLIDERS, display_by_visibility,
-                               filter_text_in_nf_df, get_dd_country_options,
-                               get_df_country_counts_and_titles,
-                               get_df_nf_filtered, get_nf_count_map,
-                               get_participating_country_codes)
+from netflimap.helpers import (
+    SLIDERS,
+    display_by_visibility,
+    filter_text_in_nf_df,
+    get_dd_country_options,
+    get_df_country_counts_and_titles,
+    get_df_nf_filtered,
+    get_nf_count_map,
+    get_participating_country_codes,
+)
 
 df_netflix = pd.read_csv("data/netflix_dataset.csv")
 df_country_counts_and_titles = get_df_country_counts_and_titles(df_netflix)

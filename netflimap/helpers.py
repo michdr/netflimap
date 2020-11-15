@@ -107,7 +107,7 @@ def get_df_nf_filtered(df, movie_len, n_seasons):
     return df_filtered.reset_index()
 
 
-def filter_text_in_nf_df(df, text, threshold=5):
+def filter_text_in_nf_df(df, text, top_results=40):
     if not text:
         return df
     choices = [
@@ -117,7 +117,8 @@ def filter_text_in_nf_df(df, text, threshold=5):
         for _, r in df.iterrows()
     ]
     results = process.extract(text, choices, limit=len(df))
-    result_strs = [r[0] for r in results if r[1] >= threshold]
+    results.sort(key=lambda x: (-x[1]))
+    result_strs = [r[0] for r in results[:top_results]]
     result_titles = [rs.split("\n")[0] for rs in result_strs]
     df_result = df.query("title == @result_titles")
     return df_result
