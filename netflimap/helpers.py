@@ -37,11 +37,19 @@ def get_df_country_counts_and_titles(df, n_of_tiles=5):
         country = dict()
         country["code"] = c_alpha3
         country["count"] = (
-            df["country_code"].str.contains(c_alpha3).value_counts().get(True) or 0
+            (df["country_code"].str.contains(c_alpha3).value_counts().get(True) or 0)
+            if len(df)
+            else 0
         )
         df.country_code.fillna("", inplace=True)
-        country["titles"] = ", ".join(
-            df[df["country_code"].str.contains(c_alpha3)]["title"].tolist()[:n_of_tiles]
+        country["titles"] = (
+            ", ".join(
+                df[df["country_code"].str.contains(c_alpha3)]["title"].tolist()[
+                    :n_of_tiles
+                ]
+            )
+            if len(df)
+            else ""
         )
         if country["count"] > n_of_tiles:
             country["titles"] += ", ..."

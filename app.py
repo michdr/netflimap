@@ -273,11 +273,14 @@ def update_nf_table(n_clicks, json_filtered, selected_countries):
         df_filtered_netflix = (
             pd.read_json(json_filtered) if json_filtered else df_netflix
         )
-        df_cf_netflix = df_filtered_netflix[
-            df_filtered_netflix["country_code"].str.contains(
-                "|".join(selected_countries), na=False
-            )
-        ]
+        if not len(df_filtered_netflix):
+            df_cf_netflix = df_filtered_netflix
+        else:
+            df_cf_netflix = df_filtered_netflix[
+                df_filtered_netflix["country_code"].str.contains(
+                    "|".join(selected_countries), na=False
+                )
+            ]
     else:
         df_cf_netflix = df_netflix
 
