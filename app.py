@@ -149,6 +149,7 @@ app.layout = html.Div(
                                 },
                                 data=df_netflix.to_dict("records"),
                                 tooltip_data=get_tooltip_data(df_netflix),
+                                tooltip_duration=None,
                                 row_selectable="single",
                                 sort_action="native",
                                 page_action="native",
