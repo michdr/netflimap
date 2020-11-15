@@ -8,11 +8,15 @@ import dash_table
 import pandas as pd
 from dash.dependencies import Input, Output, State
 
-from netflimap.helpers import (SLIDERS, display_by_visibility,
-                               get_dd_country_options,
-                               get_df_country_counts_and_titles,
-                               get_df_nf_filtered, get_nf_count_map,
-                               get_participating_country_codes)
+from netflimap.helpers import (
+    SLIDERS,
+    display_by_visibility,
+    get_dd_country_options,
+    get_df_country_counts_and_titles,
+    get_df_nf_filtered,
+    get_nf_count_map,
+    get_participating_country_codes,
+)
 
 df_netflix = pd.read_csv("data/netflix_dataset.csv")
 df_country_counts_and_titles = get_df_country_counts_and_titles(df_netflix)
@@ -27,6 +31,29 @@ NF_DATATABLE_COLUMNS = [
 
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+
+def get_tooltip_data(df_nf):
+    return [
+        {
+            "type": {
+                "value": row["listed_in"],
+                "type": "markdown",
+            },
+            "title": {
+                "value": f"**Description**: {row['description']}\n\n"
+                f"**Cast**: {row['cast']}\n\n"
+                f"**Director**: {row['director']}\n\n",
+                "type": "markdown",
+            },
+            "country_code": {
+                "value": row["country"] if isinstance(row["country"], str) else "",
+                "type": "markdown",
+            },
+        }
+        for row in df_nf.to_dict("rows")
+    ]
+
 
 app.layout = html.Div(
     [
@@ -104,14 +131,14 @@ app.layout = html.Div(
                         html.Br(),
                         html.Div(
                             html.Button(
-                                "Show filtered titles table", id="update-table"
+                                "Update filtered titles table", id="update-nf-table"
                             ),
                             style={"textAlign": "center"},
                         ),
                         html.Br(),
                         html.Div(
                             dash_table.DataTable(
-                                id="table",
+                                id="nf-table",
                                 columns=[
                                     {"name": i, "id": i}
                                     for i in df_netflix[NF_DATATABLE_COLUMNS].columns
@@ -121,27 +148,7 @@ app.layout = html.Div(
                                     "height": "auto",
                                 },
                                 data=df_netflix.to_dict("records"),
-                                tooltip_data=[
-                                    {
-                                        "type": {
-                                            "value": row["listed_in"],
-                                            "type": "markdown",
-                                        },
-                                        "title": {
-                                            "value": f"**Description**: {row['description']}\n\n"
-                                            f"**Cast**: {row['cast']}\n\n"
-                                            f"**Director**: {row['director']}\n\n",
-                                            "type": "markdown",
-                                        },
-                                        "country_code": {
-                                            "value": row["country"]
-                                            if isinstance(row["country"], str)
-                                            else "",
-                                            "type": "markdown",
-                                        },
-                                    }
-                                    for row in df_netflix.to_dict("rows")
-                                ],
+                                tooltip_data=get_tooltip_data(df_netflix),
                                 row_selectable="single",
                                 sort_action="native",
                                 page_action="native",
@@ -149,6 +156,15 @@ app.layout = html.Div(
                                 page_current=0,
                                 page_size=10,
                             )
+                        ),
+                        html.Div(
+                            html.A(
+                                "Open in Netflix",
+                                href="https://www.netflix.com/browse",
+                                target="_blank",
+                                id="netflix-a",
+                            ),
+                            style={"textAlign": "center"},
                         ),
                     ],
                     className="six columns",
@@ -199,14 +215,8 @@ def update_selected_countries(click_data, _, __, json_filtered, value):
     elif "clear-countries" in changed_id:
         return []
     elif "nf-map.clickData" in changed_id:
-        # reading json_filtered is too slow
-        # participating_country_codes = get_participating_country_codes(
-        #     df_filtered_country_counts_and_titles
-        # )
         with suppress(TypeError, IndexError):
             location = click_data["points"][0]["location"]
-            # if location not in participating_country_codes:
-            #     return value
             if not value:
                 value = [location]
             elif location in value:
@@ -248,6 +258,39 @@ def update_nf_map(
         )
     else:
         return figure, df_netflix.to_json()
+
+
+@app.callback(
+    [Output("nf-table", "data"), Output("nf-table", "tooltip_data")],
+    Input("update-nf-table", "n_clicks"),
+    [State("df-filtered", "children"), State("countries-dd", "value")],
+)
+def update_nf_table(n_clicks, json_filtered, selected_countries):
+    if n_clicks:
+        df_filtered_netflix = (
+            pd.read_json(json_filtered) if json_filtered else df_netflix
+        )
+        df_cf_netflix = df_filtered_netflix[
+            df_filtered_netflix["country_code"].str.contains(
+                "|".join(selected_countries), na=False
+            )
+        ]
+    else:
+        df_cf_netflix = df_netflix
+
+    return df_cf_netflix.to_dict("records"), get_tooltip_data(df_cf_netflix)
+
+
+@app.callback(
+    Output("netflix-a", "href"),
+    Input("nf-table", "derived_virtual_selected_rows"),
+    State("nf-table", "data"),
+)
+def select_nf_title(selected_rows, data):
+    if len(selected_rows) > 0:
+        return f'https://www.netflix.com/watch/{data[selected_rows[0]]["show_id"]}'
+    else:
+        return "https://www.netflix.com/browse"
 
 
 if __name__ == "__main__":
