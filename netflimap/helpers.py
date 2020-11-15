@@ -1,6 +1,7 @@
 import iso3166
 import pandas as pd
 from plotly import graph_objects as go
+from rapidfuzz import process
 
 
 def _slider_marks(start, stop, step, text):
@@ -104,3 +105,19 @@ def get_df_nf_filtered(df, movie_len, n_seasons):
     query = query or "(type != 'Movie' and type != 'TV Show')"
     df_filtered = df.query(query)
     return df_filtered.reset_index()
+
+
+def filter_text_in_nf_df(df, text, threshold=5):
+    if not text:
+        return df
+    choices = [
+        "\n".join(
+            [str(r["title"]), str(r["description"]), str(r["director"]), str(r["cast"])]
+        )
+        for _, r in df.iterrows()
+    ]
+    results = process.extract(text, choices, limit=len(df))
+    result_strs = [r[0] for r in results if r[1] >= threshold]
+    result_titles = [rs.split("\n")[0] for rs in result_strs]
+    df_result = df.query("title == @result_titles")
+    return df_result
